@@ -917,12 +917,12 @@ function setSyncState(state){
 async function fetchAll(){
   if(!sheetURL){setSyncState('local');return;}
   setSyncState('loading');
-  // Route through allorigins proxy to bypass CORS restriction on GitHub Pages
-  const proxy='https://api.allorigins.win/get?url='+encodeURIComponent(sheetURL+'?nc='+Date.now());
+  // Route through corsproxy.io to bypass CORS restriction on GitHub Pages
+  const proxy='https://corsproxy.io/?url='+encodeURIComponent(sheetURL+'?nc='+Date.now());
   try{
     const r=await fetch(proxy);
-    const wrapper=await r.json();
-    const d=JSON.parse(wrapper.contents);
+    const text=await r.text();
+    const d=JSON.parse(text);
     if(d.ok){
       Object.assign(localStatus,d.statuses||{});
       Object.assign(localOwners,d.owners||{});
