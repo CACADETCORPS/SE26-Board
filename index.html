@@ -917,13 +917,12 @@ function setSyncState(state){
 async function fetchAll(){
   if(!sheetURL){setSyncState('local');return;}
   setSyncState('loading');
+  // Route through allorigins proxy to bypass CORS restriction on GitHub Pages
+  const proxy='https://api.allorigins.win/get?url='+encodeURIComponent(sheetURL+'?nc='+Date.now());
   try{
-    const r=await fetch(sheetURL,{
-      method:'GET',
-      redirect:'follow'
-    });
-    const text=await r.text();
-    const d=JSON.parse(text);
+    const r=await fetch(proxy);
+    const wrapper=await r.json();
+    const d=JSON.parse(wrapper.contents);
     if(d.ok){
       Object.assign(localStatus,d.statuses||{});
       Object.assign(localOwners,d.owners||{});
@@ -1288,13 +1287,7 @@ if(document.readyState==='loading'){
 } else {
   initBoard();
 }
-// Auto-connect by simulating the setup save — triggers same path as manual paste
-window.addEventListener('load', function(){
-  setTimeout(function(){
-    const el = document.getElementById('sheets-url');
-    if(el) { el.value = SHEET_URL; saveSheetURL(); }
-  }, 500);
-});
+
 </script>
 </body>
 </html>
