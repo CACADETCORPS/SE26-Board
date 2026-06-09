@@ -687,7 +687,7 @@ const SECTIONS=['OPS','LOG','DD','S4','S1','BG','S2','BO/PL','ALL','WH'];
 const KEY='se26ttt_v5';
 let localStatus={},localOwners={},customTasks=[],aarData=[...AAR_BASE],vehicleData=[...VEHICLES],rhythmData=[...RHYTHM_BASE];
 let TASKS=[...BASE_TASKS];
-const SHEET_URL='https://script.google.com/macros/s/AKfycbzjVSN2osF3MMenjMQJB-wYpcjP2MWpmZ089X60h2cbbCLY1t__9OofRqRh3Ih6cpTxTA/exec';
+const SHEET_URL='https://se26-board.dustindionne.workers.dev'; // Replace with your Cloudflare Worker URL after deploy
 let sheetURL=SHEET_URL,session='morning';
 let syncTimer=null,pendingStatus={},pendingOwners={};
 let addFormOpen=true;
@@ -915,14 +915,11 @@ function setSyncState(state){
   lbl.textContent={ok:'Synced — live',loading:'Syncing...',err:'Offline',local:'Local only'}[state]||state;
 }
 async function fetchAll(){
-  if(!sheetURL){setSyncState('local');return;}
+  if(!sheetURL||sheetURL==='https://se26-board.dustindionne.workers.dev'){setSyncState('local');return;}
   setSyncState('loading');
-  // Route through corsproxy.io to bypass CORS restriction on GitHub Pages
-  const proxy='https://corsproxy.io/?url='+encodeURIComponent(sheetURL+'?nc='+Date.now());
   try{
-    const r=await fetch(proxy);
-    const text=await r.text();
-    const d=JSON.parse(text);
+    const r=await fetch(sheetURL);
+    const d=await r.json();
     if(d.ok){
       Object.assign(localStatus,d.statuses||{});
       Object.assign(localOwners,d.owners||{});
