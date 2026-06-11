@@ -739,9 +739,12 @@ function pushToWorker(action, data){
 
 function taskId(i){
   const t=TASKS[i];
-  if(t._tid) return t._tid;  // stable ID set at build time
+  if(!t) return 'unknown_'+i;
+  if(t._tid) return t._tid;  // stable ID — always set by rebuildTasks
   if(t._id)  return t._id;
-  return 'base_'+i; // fallback
+  // Fallback: find in BASE_TASKS by content so index is immune to custom task insertions
+  const bi=BASE_TASKS.findIndex(b=>b.task===t.task&&b.d===t.d);
+  return bi>=0?'base_'+bi:'base_unknown_'+i;
 }
 function getStatus(i){return localStatus[taskId(i)]||'open';}
 function getOwner(i){
