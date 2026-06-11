@@ -731,6 +731,11 @@ function saveLocal(){
     localStorage.setItem(KEY+'_edits', JSON.stringify(baseEdits));
   }catch(e){}
 }
+function pushToWorker(action, data){
+  if(!sheetURL)return;
+  fetch(sheetURL,{method:'POST',mode:'cors',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({action, data})}).catch(()=>{});
+}
 
 function taskId(i){
   const t=TASKS[i];
@@ -941,10 +946,10 @@ async function fetchAll(){
       if(d.baseEdits&&Object.keys(d.baseEdits).length){
         Object.assign(baseEdits, d.baseEdits);
       }
-      // Apply AAR from Worker — authoritative source
-      if(d.aar&&Array.isArray(d.aar)){
-        aarData=d.aar;
-      }
+      // Apply AAR, vehicles, rhythm from Worker — authoritative source
+      if(d.aar&&Array.isArray(d.aar)) aarData=d.aar;
+      if(d.vehicles&&Array.isArray(d.vehicles)) vehicleData=d.vehicles;
+      if(d.rhythm&&Array.isArray(d.rhythm)) rhythmData=d.rhythm;
       saveLocal();rebuildTasks();populateDayFilter();render();updateStats();
       setSyncState('ok');
       document.getElementById('offline-banner').classList.remove('show');
@@ -1094,8 +1099,8 @@ function renderRhythm(){
   document.getElementById('rhythm-table-render').innerHTML=rhythmData.map((r,i)=>{
     const isNow=blocks[i]&&m>=blocks[i].s&&m<blocks[i].e;
     return`<tr class="${isNow?'current-block':''}">
-      <td class="rhythm-time"><span contenteditable="true" class="editable-cell" onblur="rhythmData[${i}].time=this.textContent.trim();saveLocal()">${r.time}</span></td>
-      <td><span contenteditable="true" class="editable-cell" onblur="rhythmData[${i}].event=this.textContent.trim();saveLocal()" style="flex:1">${r.event}</span></td>
+      <td class="rhythm-time"><span contenteditable="true" class="editable-cell" onblur="rhythmData[${i}].time=this.textContent.trim();saveLocal();pushToWorker('sync_rhythm',rhythmData)">${r.time}</span></td>
+      <td><span contenteditable="true" class="editable-cell" onblur="rhythmData[${i}].event=this.textContent.trim();saveLocal();pushToWorker('sync_rhythm',rhythmData)" style="flex:1">${r.event}</span></td>
       <td style="width:28px"><button class="delete-btn" onclick="deleteRhythm(${i})" title="Remove">&#215;</button></td>
     </tr>`;
   }).join('');
@@ -1105,20 +1110,21 @@ function addRhythm(){
   const event=document.getElementById('new-r-event').value.trim();
   if(!time||!event)return;
   rhythmData.push({time,event});
+  pushToWorker('sync_rhythm',rhythmData);
   saveLocal();renderRhythm();
   document.getElementById('new-r-time').value='';
   document.getElementById('new-r-event').value='';
 }
 function deleteRhythm(i){
   if(!confirm('Remove this rhythm block?'))return;
-  rhythmData.splice(i,1);saveLocal();renderRhythm();
+  rhythmData.splice(i,1);saveLocal();renderRhythm();pushToWorker('sync_rhythm',rhythmData);
 }
 function renderVehicles(){
   document.getElementById('vehicle-body').innerHTML=vehicleData.map((v,i)=>`
     <tr>
-      <td><span contenteditable="true" class="editable-cell" onblur="vehicleData[${i}].name=this.textContent.trim();saveLocal()" style="font-weight:600">${v.name}</span></td>
-      <td><span contenteditable="true" class="editable-cell" onblur="vehicleData[${i}].assign=this.textContent.trim();saveLocal()" style="color:var(--text2)">${v.assign}</span></td>
-      <td><span contenteditable="true" class="editable-cell" onblur="vehicleData[${i}].note=this.textContent.trim();saveLocal()">${v.note}</span></td>
+      <td><span contenteditable="true" class="editable-cell" onblur="vehicleData[${i}].name=this.textContent.trim();saveLocal();pushToWorker('sync_vehicles',vehicleData)" style="font-weight:600">${v.name}</span></td>
+      <td><span contenteditable="true" class="editable-cell" onblur="vehicleData[${i}].assign=this.textContent.trim();saveLocal();pushToWorker('sync_vehicles',vehicleData)" style="color:var(--text2)">${v.assign}</span></td>
+      <td><span contenteditable="true" class="editable-cell" onblur="vehicleData[${i}].note=this.textContent.trim();saveLocal();pushToWorker('sync_vehicles',vehicleData)">${v.note}</span></td>
       <td><button class="delete-btn" onclick="deleteVehicle(${i})" title="Remove">&#215;</button></td>
     </tr>`).join('');
 }
@@ -1128,14 +1134,14 @@ function addVehicle(){
   const note=document.getElementById('new-v-note').value.trim();
   if(!name)return;
   vehicleData.push({name,assign,note});
-  saveLocal();renderVehicles();
+  saveLocal();renderVehicles();pushToWorker('sync_vehicles',vehicleData);
   document.getElementById('new-v-name').value='';
   document.getElementById('new-v-assign').value='';
   document.getElementById('new-v-note').value='';
 }
 function deleteVehicle(i){
   if(!confirm('Remove "'+vehicleData[i].name+'" from the vehicle list?'))return;
-  vehicleData.splice(i,1);saveLocal();renderVehicles();
+  vehicleData.splice(i,1);saveLocal();renderVehicles();pushToWorker('sync_vehicles',vehicleData);
 }
 
 function renderAAR(){
@@ -1149,8 +1155,7 @@ function renderAAR(){
 }
 function deleteAAR(i){
   if(!confirm('Delete this AAR entry?'))return;
-  aarData.splice(i,1);saveLocal();renderAAR();
-  if(sheetURL)fetch(sheetURL,{method:'POST',mode:'cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete_aar',index:i})}).catch(()=>{});
+  aarData.splice(i,1);saveLocal();renderAAR();pushToWorker('sync_aar',aarData);
 }
 function addAAR(){
   const rawDate=document.getElementById('aar-date').value;
@@ -1160,7 +1165,7 @@ function addAAR(){
   if(!sus&&!imp)return;
   const entry={date,sus,imp};
   aarData.push(entry);saveLocal();
-  if(sheetURL)fetch(sheetURL,{method:'POST',mode:'cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'aar',...entry})}).catch(()=>{});
+  pushToWorker('sync_aar', aarData);
   renderAAR();
   document.getElementById('aar-date').value='';document.getElementById('aar-sus').value='';document.getElementById('aar-imp').value='';
 }
