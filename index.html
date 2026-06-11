@@ -774,6 +774,7 @@ const DAYS_OF_WEEK = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
 const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 
 function dayLabel(daysOut) {
+  if (isNaN(daysOut)) daysOut = 0; // guard against bad data
   // positive = before D-Day, 0 = D-Day, negative = D+ recovery ops
   const dt = new Date(DDAY);
   dt.setDate(DDAY.getDate() - daysOut);
@@ -1017,7 +1018,7 @@ function render(){
     return true;
   });
   const byDay={};
-  filtered.forEach(t=>{if(!byDay[t.d])byDay[t.d]=[];byDay[t.d].push(t);});
+  filtered.forEach(t=>{const dk=isNaN(Number(t.d))?0:t.d;if(!byDay[dk])byDay[dk]=[];byDay[dk].push({...t,d:Number(dk)});});
   const days=Object.keys(byDay).sort((a,b)=>b-a);
   const board=document.getElementById('task-board');
   if(!filtered.length){board.innerHTML='<div class="empty-msg">NO TASKS MATCH THIS FILTER</div>';return;}
