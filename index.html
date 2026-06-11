@@ -941,6 +941,10 @@ async function fetchAll(){
       if(d.baseEdits&&Object.keys(d.baseEdits).length){
         Object.assign(baseEdits, d.baseEdits);
       }
+      // Apply AAR from Worker — authoritative source
+      if(d.aar&&Array.isArray(d.aar)){
+        aarData=d.aar;
+      }
       saveLocal();rebuildTasks();populateDayFilter();render();updateStats();
       setSyncState('ok');
       document.getElementById('offline-banner').classList.remove('show');
@@ -1146,6 +1150,7 @@ function renderAAR(){
 function deleteAAR(i){
   if(!confirm('Delete this AAR entry?'))return;
   aarData.splice(i,1);saveLocal();renderAAR();
+  if(sheetURL)fetch(sheetURL,{method:'POST',mode:'cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete_aar',index:i})}).catch(()=>{});
 }
 function addAAR(){
   const rawDate=document.getElementById('aar-date').value;
