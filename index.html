@@ -875,9 +875,10 @@ function saveEdit() {
     baseEdits[stableId] = {task: newName, notes: newNotes, assignedTo: newAssigned, d: updatedD};
   }
   saveLocal();
-  if (sheetURL && t._custom) {
+  if (sheetURL) {
+    const workerId = t._custom ? t._id : (t._tid || taskId(editingIndex));
     fetch(sheetURL, {method:'POST',mode:'cors',headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({action:'edit_task', id: t._id, task: newName, notes: newNotes, assignedTo: newAssigned, day: updatedD})
+      body: JSON.stringify({action:'edit_task', id: workerId, task: newName, notes: newNotes, assignedTo: newAssigned, day: updatedD, isBase: !t._custom})
     }).catch(() => {});
   }
   closeEditModal();
@@ -929,7 +930,14 @@ async function fetchAll(){
       Object.assign(localOwners,d.owners||{});
       if(d.tasks&&d.tasks.length){
         const existIds=new Set(customTasks.map(t=>t.id||t._id));
-        d.tasks.forEach(t=>{if(!existIds.has(t.id))customTasks.push({id:t.id,d:Number(t.day||t.d||0),task:t.task,owner:t.owner||'',notes:t.notes||''});});
+        d.tasks.forEach(t=>{
+          if(t.isBase){
+            // Base task edit — store in baseEdits so rebuildTasks picks it up
+            baseEdits[t.id]={task:t.task,notes:t.notes,assignedTo:t.assignedTo||'',d:Number(t.day||t.d||0)};
+          } else if(!existIds.has(t.id)){
+            customTasks.push({id:t.id,d:Number(t.day||t.d||0),task:t.task,owner:t.owner||'',notes:t.notes||''});
+          }
+        });
       }
       saveLocal();rebuildTasks();populateDayFilter();render();updateStats();
       setSyncState('ok');
