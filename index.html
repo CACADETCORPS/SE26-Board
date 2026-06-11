@@ -343,7 +343,7 @@ input[type="number"]::-webkit-outer-spin-button,input[type="number"]::-webkit-in
   </div>
   <div id="aar-list"></div>
   <div class="aar-add-row">
-    <input class="aar-input" id="aar-date" placeholder="D-?" style="max-width:80px">
+    <input class="aar-input" id="aar-date" type="date" style="max-width:140px">
     <input class="aar-input" id="aar-sus" placeholder="Sustain...">
     <input class="aar-input" id="aar-imp" placeholder="Improve...">
     <button class="brief-btn primary" onclick="addAAR()">+ ADD</button>
@@ -1147,7 +1147,8 @@ function deleteAAR(i){
   aarData.splice(i,1);saveLocal();renderAAR();
 }
 function addAAR(){
-  const date=document.getElementById('aar-date').value.trim()||'NEW';
+  const rawDate=document.getElementById('aar-date').value;
+  const date=rawDate?new Date(rawDate+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}).toUpperCase():new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}).toUpperCase();
   const sus=document.getElementById('aar-sus').value.trim();
   const imp=document.getElementById('aar-imp').value.trim();
   if(!sus&&!imp)return;
@@ -1163,6 +1164,7 @@ function showTab(t,el){
   document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
   document.getElementById('panel-'+t).classList.add('active');
   el.classList.add('active');
+  if(t==='aar'){const d=document.getElementById('aar-date');if(d&&!d.value)d.valueAsDate=new Date();}
 }
 function setSession(s){
   session=s;
