@@ -259,11 +259,19 @@ input[type="number"]::-webkit-outer-spin-button,input[type="number"]::-webkit-in
     </div>
     <div class="add-task-fields" id="add-task-fields">
       <input class="ctrl-input add-task-name" id="new-task-name" placeholder="Task description..." type="text">
-      <select class="ctrl-select" id="new-task-owner">
+      <select class="ctrl-select" id="new-task-owner" onchange="if(this.value==='__new__'){const nv=prompt('New section/owner name:');if(nv&&nv.trim()){const v=addCustomSection(nv);rebuildSelectOpts(this,v);}else{this.value='';}}">
         <option value="">-- Section --</option>
-        <option>OPS</option><option>LOG</option><option>DD</option><option>S4</option>
-        <option>S1</option><option>BG</option><option>S2</option><option>BO/PL</option>
-        <option>ALL</option><option>WH</option>
+        <option value="OPS">OPS</option>
+        <option value="LOG">LOG</option>
+        <option value="DD">DD</option>
+        <option value="S4">S4</option>
+        <option value="S1">S1</option>
+        <option value="BG">BG</option>
+        <option value="S2">S2</option>
+        <option value="BO/PL">BO/PL</option>
+        <option value="ALL">ALL</option>
+        <option value="WH">WH</option>
+        <option value="__new__">+ Add new...</option>
       </select>
       <div style="display:flex;align-items:center;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:4px 8px">
         <span style="font-family:var(--mono);font-size:10px;color:var(--gold)">D-</span>
@@ -683,7 +691,8 @@ function json(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }`;
 
-const SECTIONS=['OPS','LOG','DD','S4','S1','BG','S2','BO/PL','ALL','WH'];
+let SECTIONS=['OPS','LOG','DD','S4','S1','BG','S2','BO/PL','ALL','WH'];
+let customSections=[];
 const KEY='se26ttt_v5';
 let localStatus={},localOwners={},customTasks=[],aarData=[...AAR_BASE],vehicleData=[...VEHICLES],rhythmData=[...RHYTHM_BASE];
 let TASKS=[...BASE_TASKS];
@@ -691,6 +700,24 @@ const SHEET_URL='https://se26-board.dustindionne.workers.dev'; // Replace with y
 let sheetURL=SHEET_URL,session='morning';
 let syncTimer=null,pendingStatus={},pendingOwners={};
 let deletedIds={},baseEdits={}; // persisted separately from sync data
+function allSections(){return SECTIONS;}
+function addCustomSection(val){
+  val=val.trim().toUpperCase();
+  if(!val||SECTIONS.includes(val))return val;
+  customSections.push(val);
+  SECTIONS=[...new Set([...['OPS','LOG','DD','S4','S1','BG','S2','BO/PL','ALL','WH'],...customSections])];
+  saveLocal();
+  // Re-render all dropdowns
+  document.querySelectorAll('.owner-select').forEach(sel=>{
+    const cur=sel.value;
+    rebuildSelectOpts(sel,cur);
+  });
+  return val;
+}
+function rebuildSelectOpts(sel,selected){
+  const base='<option value="">-- Assign --</option>';
+  sel.innerHTML=base+allSections().map(s=>`<option value="${s}"${s===selected?' selected':''}>${s}</option>`).join('')+'<option value="__new__">+ Add new...</option>';
+}
 let addFormOpen=true;
 
 function rebuildTasks(){
@@ -720,13 +747,14 @@ function loadLocal(){
     if(d.aarData)aarData=d.aarData;
     if(d.vehicleData)vehicleData=d.vehicleData;
     if(d.rhythmData)rhythmData=d.rhythmData;
+    if(d.customSections){customSections=d.customSections;SECTIONS=[...new Set([...['OPS','LOG','DD','S4','S1','BG','S2','BO/PL','ALL','WH'],...customSections])];}
     // sheetURL is hardcoded — never loaded from localStorage
   }catch(e){localStatus={};}
   rebuildTasks();
 }
 function saveLocal(){
   try{
-    localStorage.setItem(KEY,JSON.stringify({statuses:localStatus,owners:localOwners,customTasks,aarData,vehicleData,rhythmData}));
+    localStorage.setItem(KEY,JSON.stringify({statuses:localStatus,owners:localOwners,customTasks,aarData,vehicleData,rhythmData,customSections}));
     localStorage.setItem(KEY+'_deleted', JSON.stringify(deletedIds));
     localStorage.setItem(KEY+'_edits', JSON.stringify(baseEdits));
   }catch(e){}
@@ -761,6 +789,14 @@ function cycleStatus(i){
   saveLocal();scheduleSyncPush();render();updateStats();
 }
 function changeOwner(i,val){
+  if(val==='__new__'){
+    const nv=prompt('New section/owner name:');
+    if(!nv||!nv.trim()){document.getElementById('own-'+i).value='';return;}
+    val=addCustomSection(nv);
+    // rebuild just this select with new value selected
+    const sel=document.getElementById('own-'+i);
+    if(sel)rebuildSelectOpts(sel,val);
+  }
   localOwners[taskId(i)]=val;
   pendingOwners[taskId(i)]=val;
   saveLocal();scheduleSyncPush();updateStats();
@@ -997,7 +1033,15 @@ function syncNewTaskDNum(){
 }
 function addNewTask(){
   const name=document.getElementById('new-task-name').value.trim();
-  const owner=document.getElementById('new-task-owner').value;
+  let owner=document.getElementById('new-task-owner').value;
+  if(owner==='__new__'){
+    const nv=prompt('New section/owner name:');
+    if(!nv||!nv.trim()){return;}
+    owner=addCustomSection(nv);
+    // rebuild the add-task dropdown with new value
+    const sel=document.getElementById('new-task-owner');
+    if(sel)rebuildSelectOpts(sel,owner);
+  }
   const day=parseInt(document.getElementById('new-task-dnum').value);
   const validDay = !isNaN(day) && day >= -4 && day <= 30;
   const finalDay = validDay ? day : 0;
@@ -1034,7 +1078,7 @@ function render(){
   const days=Object.keys(byDay).sort((a,b)=>b-a);
   const board=document.getElementById('task-board');
   if(!filtered.length){board.innerHTML='<div class="empty-msg">NO TASKS MATCH THIS FILTER</div>';return;}
-  const ownerOpts=`<option value="">-- Assign --</option>`+SECTIONS.map(s=>`<option value="${s}">${s}</option>`).join('');
+  const ownerOpts=`<option value="">-- Assign --</option>`+allSections().map(s=>`<option value="${s}">${s}</option>`).join('')+`<option value="__new__">+ Add new...</option>`;
   board.innerHTML=days.map(d=>{
     const tasks=byDay[d];
     const done=tasks.filter(t=>t._s==='done').length;
@@ -1046,7 +1090,7 @@ function render(){
       const ownerKey=t._owner?t._owner.replace('/','').replace(' ',''):'none';
       const ownerClass='o-'+ownerKey;
       const spl=s==='done'?'<span class="sp-done">&#10003; DONE</span>':s==='started'?'<span class="sp-started">&#9680; ACTIVE</span>':flag?'<span class="sp-flag">&#9873; UNASSIGNED</span>':'<span class="sp-open">&#9675; PENDING</span>';
-      const selOpts=`<option value="">-- Assign --</option>`+SECTIONS.map(sec=>`<option value="${sec}"${t._owner===sec?' selected':''}>${sec}</option>`).join('');
+      const selOpts=`<option value="">-- Assign --</option>`+allSections().map(sec=>`<option value="${sec}"${t._owner===sec?' selected':''}>${sec}</option>`).join('')+`<option value="__new__">+ Add new...</option>`;
       return`<div class="task-row ${s} ${flag?'flag':''}">
         <button class="status-btn ${s}" onclick="cycleStatus(${i})">${s==='done'?'&#10003;':s==='started'?'&#9680;':''}</button>
         <div><div class="task-name">${t.task}${t._custom?'<span style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-left:6px">+NEW</span>':''}</div><div class="task-meta">${t.notes?`<span class="task-note">${t.notes}</span>`:''} ${t.res?`<span class="task-res">&#9731; ${t.res}</span>`:''} ${t._assignedTo?`<span class="task-note" style="color:var(--ops)">&#9654; ${t._assignedTo}</span>`:''}</div></div>
