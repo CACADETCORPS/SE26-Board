@@ -261,15 +261,15 @@ input[type="number"]::-webkit-outer-spin-button,input[type="number"]::-webkit-in
       <input class="ctrl-input add-task-name" id="new-task-name" placeholder="Task description..." type="text">
       <select class="ctrl-select" id="new-task-owner" onchange="if(this.value==='__new__'){const nv=prompt('New section/owner name:');if(nv&&nv.trim()){const v=addCustomSection(nv);rebuildSelectOpts(this,v);}else{this.value='';}}">
         <option value="">-- Section --</option>
-        <option value="OPS">OPS</option>
-        <option value="LOG">LOG</option>
-        <option value="DD">DD</option>
-        <option value="S4">S4</option>
-        <option value="S1">S1</option>
-        <option value="BG">BG</option>
-        <option value="S2">S2</option>
-        <option value="BO/PL">BO/PL</option>
         <option value="ALL">ALL</option>
+        <option value="BG">BG</option>
+        <option value="BO/PL">BO/PL</option>
+        <option value="DD">DD</option>
+        <option value="LOG">LOG</option>
+        <option value="OPS">OPS</option>
+        <option value="S1">S1</option>
+        <option value="S2">S2</option>
+        <option value="S4">S4</option>
         <option value="WH">WH</option>
         <option value="__new__">+ Add new...</option>
       </select>
@@ -700,7 +700,7 @@ const SHEET_URL='https://se26-board.dustindionne.workers.dev'; // Replace with y
 let sheetURL=SHEET_URL,session='morning';
 let syncTimer=null,pendingStatus={},pendingOwners={};
 let deletedIds={},baseEdits={}; // persisted separately from sync data
-function allSections(){return SECTIONS;}
+function allSections(){return [...SECTIONS].sort((a,b)=>a.localeCompare(b));}
 function addCustomSection(val){
   val=val.trim().toUpperCase();
   if(!val||SECTIONS.includes(val))return val;
