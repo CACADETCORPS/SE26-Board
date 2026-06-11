@@ -931,13 +931,14 @@ async function fetchAll(){
       if(d.tasks&&d.tasks.length){
         const existIds=new Set(customTasks.map(t=>t.id||t._id));
         d.tasks.forEach(t=>{
-          if(t.isBase){
-            // Base task edit — store in baseEdits so rebuildTasks picks it up
-            baseEdits[t.id]={task:t.task,notes:t.notes,assignedTo:t.assignedTo||'',d:Number(t.day||t.d||0)};
-          } else if(!existIds.has(t.id)){
+          if(!existIds.has(t.id)){
             customTasks.push({id:t.id,d:Number(t.day||t.d||0),task:t.task,owner:t.owner||'',notes:t.notes||''});
           }
         });
+      }
+      // Apply base task edits from Worker — overrides local baseEdits
+      if(d.baseEdits&&Object.keys(d.baseEdits).length){
+        Object.assign(baseEdits, d.baseEdits);
       }
       saveLocal();rebuildTasks();populateDayFilter();render();updateStats();
       setSyncState('ok');
