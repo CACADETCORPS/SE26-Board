@@ -933,7 +933,7 @@ async function fetchAll(){
         const existIds=new Set(customTasks.map(t=>t.id||t._id));
         d.tasks.forEach(t=>{
           if(!existIds.has(t.id)){
-            customTasks.push({id:t.id,d:Number(t.day||t.d||0),task:t.task,owner:t.owner||'',notes:t.notes||''});
+            const td=Number(t.day??t.d??0); customTasks.push({id:t.id,d:isNaN(td)?0:td,task:t.task,owner:t.owner||'',notes:t.notes||'',assignedTo:t.assignedTo||''});
           }
         });
       }
