@@ -1069,7 +1069,7 @@ function updateStats(){
 
 function populateDayFilter(){
   const sel=document.getElementById('f-day');
-  const dplus=[-1,-2,-3,-4];
+  const dplus=[-1,-2,-3,-4,12,13]; // anchor days D-12 and D-13 (Jun 5-6) always shown
   // Use TASKS (post-rebuild) so rescheduled days appear in the filter
   const allDays=[...new Set([...TASKS.map(t=>t.d),...dplus])].sort((a,b)=>b-a);
   // Only populate the filter dropdown — new-task-day was replaced with number/date inputs
