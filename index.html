@@ -861,7 +861,7 @@ function saveEdit() {
   const newNotes = document.getElementById('edit-task-notes').value.trim();
   const newAssigned = document.getElementById('edit-task-assigned').value.trim();
   const newD = parseInt(document.getElementById('edit-task-dnum').value);
-  const validD = !isNaN(newD) && newD >= 0;
+  const validD = !isNaN(newD) && newD >= -4;
   if (!newName) { document.getElementById('edit-task-name').focus(); return; }
   const t = TASKS[editingIndex];
   const updatedD = validD ? newD : t.d;
