@@ -295,11 +295,12 @@ input[type="number"]::-webkit-outer-spin-button,input[type="number"]::-webkit-in
       <option>S1</option><option>BG</option><option>S2</option><option>BO/PL</option>
       <option>ALL</option><option>WH</option>
     </select>
-    <select class="ctrl-select" id="f-status" onchange="render()">
-      <option value="">All status</option>
-      <option value="open">Pending</option><option value="started">Active</option>
-      <option value="done">Complete</option><option value="flag">Unassigned</option>
-    </select>
+    <div id="f-status-group" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:5px 10px">
+      <label style="font-family:var(--mono);font-size:10px;color:var(--text2);display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="fs-open" checked onchange="render()"> PENDING</label>
+      <label style="font-family:var(--mono);font-size:10px;color:var(--amber);display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="fs-started" checked onchange="render()"> ACTIVE</label>
+      <label style="font-family:var(--mono);font-size:10px;color:var(--green);display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="fs-done" checked onchange="render()"> COMPLETE</label>
+      <label style="font-family:var(--mono);font-size:10px;color:var(--red);display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="fs-flag" checked onchange="render()"> UNASSIGNED</label>
+    </div>
     <select class="ctrl-select" id="f-day" onchange="render()">
       <option value="">All days</option>
     </select>
@@ -1040,13 +1041,21 @@ function addNewTask(){
 function render(){
   const search=document.getElementById('search').value.toLowerCase();
   const fOwner=document.getElementById('f-owner').value;
-  const fStatus=document.getElementById('f-status').value;
+  const fsOpen=document.getElementById('fs-open')?.checked??true;
+  const fsStarted=document.getElementById('fs-started')?.checked??true;
+  const fsDone=document.getElementById('fs-done')?.checked??true;
+  const fsFlag=document.getElementById('fs-flag')?.checked??true;
   const fDay=document.getElementById('f-day').value;
   const filtered=TASKS.map((t,i)=>({...t,_gi:i,_s:getStatus(i),_owner:getOwner(i)})).filter(t=>{
     if(search&&!t.task.toLowerCase().includes(search)&&!(t._owner||'').toLowerCase().includes(search))return false;
     if(fOwner&&t._owner!==fOwner)return false;
-    if(fStatus==='flag'&&t._owner)return false;
-    if(fStatus&&fStatus!=='flag'&&t._s!==fStatus)return false;
+    const isFlag=!t._owner;
+    if(isFlag&&!fsFlag)return false;
+    if(!isFlag){
+      if(t._s==='open'&&!fsOpen)return false;
+      if(t._s==='started'&&!fsStarted)return false;
+      if(t._s==='done'&&!fsDone)return false;
+    }
     if(fDay&&String(t.d)!==fDay)return false;
     return true;
   });
