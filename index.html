@@ -403,10 +403,11 @@ input[type="number"]::-webkit-outer-spin-button,input[type="number"]::-webkit-in
 <div class="panel" id="panel-supplies">
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px;padding:0 4px">
     <input class="aar-input" id="sup-item" placeholder="Item needed..." style="flex:2;min-width:160px">
-    <select class="aar-input" id="sup-section" style="flex:1;min-width:110px">
+    <select class="aar-input" id="sup-section" style="flex:1;min-width:110px" onchange="if(this.value==='__new__'){const nv=prompt('New section/owner name:');if(nv&&nv.trim()){const v=addCustomSection(nv);rebuildSelectOpts(this,v);}else{this.value='';}}">
       <option value="">-- Section --</option>
       <option>ALL</option><option>BG</option><option>BO/PL</option><option>DD</option>
       <option>LOG</option><option>OPS</option><option>S1</option><option>S2</option><option>S4</option><option>WH</option>
+      <option value="__new__">+ Add new...</option>
     </select>
     <input class="aar-input" id="sup-requestor" placeholder="Requestor name..." style="flex:1;min-width:120px">
     <button class="brief-btn primary" onclick="addSupply()">+ ADD</button>
