@@ -447,8 +447,18 @@ input[type="number"]::-webkit-outer-spin-button,input[type="number"]::-webkit-in
     <textarea id="edit-task-name" rows="3"></textarea>
     <div class="modal-lbl">NOTES</div>
     <input type="text" id="edit-task-notes" placeholder="Notes...">
-    <div class="modal-lbl">ASSIGNED TO <span style="color:var(--text3);font-size:9px;letter-spacing:0">(free text &mdash; name, callsign, or additional detail)</span></div>
-    <input type="text" id="edit-task-assigned" placeholder="e.g. SSG Goodman, CPT Lara, 1SG Dionne...">
+    <div class="modal-lbl">ASSIGNED TO <span style="color:var(--text3);font-size:9px;letter-spacing:0">(section, name, or callsign)</span></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <select id="edit-task-assigned-sel" style="font-family:var(--mono);font-size:12px;padding:6px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);flex:1;min-width:120px"
+        onchange="
+          const v=this.value;
+          if(v==='__new__'){const nv=prompt('New section/owner name:');if(nv&&nv.trim()){const s=addCustomSection(nv);this.value='';document.getElementById('edit-task-assigned').value=s;}else{this.value='';}}
+          else if(v){document.getElementById('edit-task-assigned').value=v;this.value='';}
+        ">
+        <option value="">— pick section —</option>
+      </select>
+      <input type="text" id="edit-task-assigned" placeholder="or type name, callsign..." style="flex:2;min-width:160px;font-family:var(--mono);font-size:12px;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text)">
+    </div>
     <div class="modal-lbl">SCHEDULED DAY</div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px">
       <div style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:6px 10px;flex:1;min-width:160px">
@@ -881,6 +891,11 @@ function editTask(i) {
   document.getElementById('edit-task-name').value = t.task;
   document.getElementById('edit-task-notes').value = t.notes || '';
   document.getElementById('edit-task-assigned').value = t._assignedTo || '';
+  // Rebuild assigned section select with current sections
+  const asel = document.getElementById('edit-task-assigned-sel');
+  if(asel){
+    asel.innerHTML='<option value="">— pick section —</option>'+allSections().map(s=>`<option value="${s}">${s}</option>`).join('')+'<option value="__new__">+ Add new...</option>';
+  }
   // populate day fields
   const dNum = t.d !== undefined ? t.d : 0;
   document.getElementById('edit-task-dnum').value = dNum;
