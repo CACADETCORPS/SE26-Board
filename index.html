@@ -714,16 +714,17 @@ function addCustomSection(val){
   customSections.push(val);
   SECTIONS=[...new Set([...['OPS','LOG','DD','S4','S1','BG','S2','BO/PL','ALL','WH'],...customSections])];
   saveLocal();
-  // Re-render all dropdowns
-  document.querySelectorAll('.owner-select').forEach(sel=>{
+  // Re-render ALL section dropdowns — task rows, add-task, supplies
+  document.querySelectorAll('.owner-select, #new-task-owner, #sup-section').forEach(sel=>{
     const cur=sel.value;
     rebuildSelectOpts(sel,cur);
   });
   return val;
 }
 function rebuildSelectOpts(sel,selected){
-  const base='<option value="">-- Assign --</option>';
-  sel.innerHTML=base+allSections().map(s=>`<option value="${s}"${s===selected?' selected':''}>${s}</option>`).join('')+'<option value="__new__">+ Add new...</option>';
+  const isTaskRow=sel.classList.contains('owner-select');
+  const placeholder=isTaskRow?'-- Assign --':'-- Section --';
+  sel.innerHTML=`<option value="">${placeholder}</option>`+allSections().map(s=>`<option value="${s}"${s===selected?' selected':''}>${s}</option>`).join('')+'<option value="__new__">+ Add new...</option>';
 }
 let addFormOpen=true;
 
