@@ -152,6 +152,13 @@ input[type="number"]::-webkit-outer-spin-button,input[type="number"]::-webkit-in
 .aar-date{font-family:var(--mono);font-size:10px;color:var(--text2)}
 .aar-sus{color:var(--green)}.aar-imp{color:var(--amber)}
 .aar-add-row{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;align-items:center}
+.supply-row{display:grid;grid-template-columns:24px 1fr 80px 120px 80px;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border2);align-items:center;font-size:12px}
+.supply-row.fulfilled{opacity:.45}
+.supply-item{font-family:var(--mono);color:var(--text)}
+.supply-section{font-family:var(--mono);font-size:10px;font-weight:700}
+.supply-req{font-family:var(--mono);font-size:10px;color:var(--text2)}
+.supply-del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:2px 6px}
+.supply-del:hover{color:var(--red)}
 .aar-input{font-family:var(--mono);font-size:12px;flex:1;min-width:140px;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text)}
 .aar-input:focus{outline:none;border-color:var(--gold)}
 .brief-controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
@@ -245,6 +252,7 @@ input[type="number"]::-webkit-outer-spin-button,input[type="number"]::-webkit-in
   <button class="tab" onclick="showTab('rhythm',this)">BATTLE RHYTHM</button>
   <button class="tab" onclick="showTab('vehicles',this)">VEHICLES</button>
   <button class="tab" onclick="showTab('aar',this)">AAR LOG</button>
+    <button class="tab" onclick="showTab('supplies',this)">SUPPLIES</button>
   <button class="tab" onclick="showTab('brief',this)">AI BRIEF</button>
   <button class="tab" onclick="showTab('qr',this)">QR CODE</button>
   <button class="tab" onclick="showTab('setup',this)" style="display:none">SETUP</button>
@@ -390,6 +398,21 @@ input[type="number"]::-webkit-outer-spin-button,input[type="number"]::-webkit-in
     </div>
     <div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:12px">Scan QR or share link — opens on any device, no login required.</div>
   </div>
+</div>
+<!-- SUPPLIES -->
+<div class="panel" id="panel-supplies">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px;padding:0 4px">
+    <input class="aar-input" id="sup-item" placeholder="Item needed..." style="flex:2;min-width:160px">
+    <select class="aar-input" id="sup-section" style="flex:1;min-width:110px">
+      <option value="">-- Section --</option>
+      <option>ALL</option><option>BG</option><option>BO/PL</option><option>DD</option>
+      <option>LOG</option><option>OPS</option><option>S1</option><option>S2</option><option>S4</option><option>WH</option>
+    </select>
+    <input class="aar-input" id="sup-requestor" placeholder="Requestor name..." style="flex:1;min-width:120px">
+    <button class="brief-btn primary" onclick="addSupply()">+ ADD</button>
+  </div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--text2);letter-spacing:2px;padding:0 4px 8px">SUPPLY REQUESTS</div>
+  <div id="supply-list"></div>
 </div>
 <!-- SETUP -->
 <div class="panel" id="panel-setup">
@@ -677,7 +700,8 @@ let TASKS=[...BASE_TASKS];
 const SHEET_URL='https://se26-board.dustindionne.workers.dev'; // Replace with your Cloudflare Worker URL after deploy
 let sheetURL=SHEET_URL,session='morning';
 let syncTimer=null,pendingStatus={},pendingOwners={};
-let deletedIds={},baseEdits={}; // persisted separately from sync data
+let deletedIds={},baseEdits={};
+let suppliesData=[]; // persisted separately from sync data
 function allSections(){return [...SECTIONS].sort((a,b)=>a.localeCompare(b));}
 function addCustomSection(val){
   val=val.trim().toUpperCase();
@@ -732,7 +756,7 @@ function loadLocal(){
 }
 function saveLocal(){
   try{
-    localStorage.setItem(KEY,JSON.stringify({statuses:localStatus,owners:localOwners,customTasks,aarData,vehicleData,rhythmData,customSections}));
+    localStorage.setItem(KEY,JSON.stringify({statuses:localStatus,owners:localOwners,customTasks,aarData,vehicleData,rhythmData,customSections,suppliesData}));
     localStorage.setItem(KEY+'_deleted', JSON.stringify(deletedIds));
     localStorage.setItem(KEY+'_edits', JSON.stringify(baseEdits));
   }catch(e){}
@@ -966,6 +990,7 @@ async function fetchAll(){
       // Apply AAR, vehicles, rhythm from Worker — authoritative source
       if(d.aar&&Array.isArray(d.aar)) aarData=d.aar;
       if(d.vehicles&&Array.isArray(d.vehicles)) vehicleData=d.vehicles;
+      if(d.supplies&&Array.isArray(d.supplies)) suppliesData=d.supplies;
       if(d.rhythm&&Array.isArray(d.rhythm)) rhythmData=d.rhythm;
       saveLocal();rebuildTasks();populateDayFilter();render();updateStats();
       setSyncState('ok');
@@ -1210,6 +1235,7 @@ function showTab(t,el){
   el.classList.add('active');
   if(t==='aar'){const d=document.getElementById('aar-date');if(d&&!d.value)d.valueAsDate=new Date();}
   if(t==='qr')renderQR();
+  if(t==='supplies')renderSupplies();
 }
 function setSession(s){
   session=s;
@@ -1326,6 +1352,40 @@ function updateCountdown() {
 }
 
 // INIT — wrapped in DOMContentLoaded to guarantee all elements exist
+function renderSupplies(){
+  const el=document.getElementById('supply-list');
+  if(!el)return;
+  if(!suppliesData.length){el.innerHTML='<div style="font-family:var(--mono);font-size:11px;color:var(--text3);padding:20px;text-align:center">No supply requests yet.</div>';return;}
+  el.innerHTML=suppliesData.map((r,i)=>`
+    <div class="supply-row${r.fulfilled?' fulfilled':''}">
+      <input type="checkbox" ${r.fulfilled?'checked':''} onchange="toggleSupply(${i})" style="cursor:pointer;accent-color:var(--green);width:16px;height:16px">
+      <span class="supply-item" style="${r.fulfilled?'text-decoration:line-through':''}">${r.item}</span>
+      <span class="supply-section" style="color:${ownerColor(r.section)}">${r.section||'—'}</span>
+      <span class="supply-req">${r.requestor||'—'}</span>
+      <button class="supply-del" onclick="deleteSupply(${i})">✕</button>
+    </div>`).join('');
+}
+function addSupply(){
+  const item=document.getElementById('sup-item').value.trim();
+  if(!item){document.getElementById('sup-item').focus();return;}
+  const section=document.getElementById('sup-section').value;
+  const requestor=document.getElementById('sup-requestor').value.trim();
+  suppliesData.push({item,section,requestor,fulfilled:false,ts:Date.now()});
+  saveLocal();pushToWorker('sync_supplies',suppliesData);
+  document.getElementById('sup-item').value='';
+  renderSupplies();
+}
+function toggleSupply(i){
+  suppliesData[i].fulfilled=!suppliesData[i].fulfilled;
+  saveLocal();pushToWorker('sync_supplies',suppliesData);
+  renderSupplies();
+}
+function deleteSupply(i){
+  if(!confirm('Remove "'+suppliesData[i].item+'" from list?'))return;
+  suppliesData.splice(i,1);
+  saveLocal();pushToWorker('sync_supplies',suppliesData);
+  renderSupplies();
+}
 function initBoard() {
   loadLocal();
   populateDayFilter();
