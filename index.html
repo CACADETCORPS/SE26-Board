@@ -704,6 +704,10 @@ let syncTimer=null,pendingStatus={},pendingOwners={};
 let deletedIds={},baseEdits={};
 let suppliesData=[]; // persisted separately from sync data
 function allSections(){return [...SECTIONS].sort((a,b)=>a.localeCompare(b));}
+function ownerColor(s){
+  const map={'OPS':'var(--ops)','LOG':'var(--log)','DD':'var(--dd)','S4':'var(--purple)','S1':'var(--amber)','BG':'var(--teal)','S2':'var(--red)','ALL':'var(--ops)','BO/PL':'var(--log)','WH':'var(--text2)'};
+  return map[s]||'var(--text2)';
+}
 function addCustomSection(val){
   val=val.trim().toUpperCase();
   if(!val||SECTIONS.includes(val))return val;
