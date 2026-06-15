@@ -902,18 +902,17 @@ function syncDFromDate() {
   const mon = MONTHS[picked.getMonth()];
   document.getElementById('edit-d-preview').textContent = dow+' '+picked.getDate()+' '+mon;
 }
-function editTask(i) {
+function openModal(i){
   const t = TASKS[i];
+  if(!t) return;
   editingIndex = i;
   document.getElementById('edit-task-name').value = t.task;
   document.getElementById('edit-task-notes').value = t.notes || '';
   document.getElementById('edit-task-assigned').value = t._assignedTo || '';
-  // Rebuild assigned section select with current sections
   const asel = document.getElementById('edit-task-assigned-sel');
   if(asel){
     asel.innerHTML='<option value="">— pick section —</option>'+allSections().map(s=>`<option value="${s}">${s}</option>`).join('')+'<option value="__new__">+ Add new...</option>';
   }
-  // populate day fields
   const dNum = t.d !== undefined ? t.d : 0;
   document.getElementById('edit-task-dnum').value = dNum;
   const dt = dNumToDate(dNum);
@@ -923,6 +922,10 @@ function editTask(i) {
   document.getElementById('edit-d-preview').textContent = dow+' '+dt.getDate()+' '+mon;
   document.getElementById('edit-modal').style.display = 'flex';
   setTimeout(() => document.getElementById('edit-task-name').focus(), 50);
+}
+function editTask(i) {
+  // Fetch latest data from Worker first so modal shows current title/notes
+  fetchAll().catch(()=>{}).finally(()=>openModal(i));
 }
 function closeEditModal() {
   document.getElementById('edit-modal').style.display = 'none';
