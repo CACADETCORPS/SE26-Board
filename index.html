@@ -1014,9 +1014,10 @@ async function fetchAll(){
     const r=await fetch(sheetURL);
     const d=await r.json();
     if(d.ok){
-      Object.assign(localStatus,d.statuses||{});
-      Object.assign(localOwners,d.owners||{});
-      if(d.priorities)Object.assign(localPriority,d.priorities||{});
+      // Worker is authoritative — fully replace local with Worker data
+      localStatus = {...localStatus, ...d.statuses};
+      localOwners = {...localOwners, ...d.owners};
+      if(d.priorities) localPriority = {...localPriority, ...d.priorities};
       if(d.tasks&&d.tasks.length){
         const existIds=new Set(customTasks.map(t=>t.id||t._id));
         d.tasks.forEach(t=>{
@@ -1025,9 +1026,9 @@ async function fetchAll(){
           }
         });
       }
-      // Apply base task edits from Worker — overrides local baseEdits
+      // Apply base task edits from Worker — full replace, not merge
       if(d.baseEdits&&Object.keys(d.baseEdits).length){
-        Object.assign(baseEdits, d.baseEdits);
+        baseEdits = {...baseEdits, ...d.baseEdits};
       }
       // Apply AAR, vehicles, rhythm from Worker — authoritative source
       if(d.aar&&Array.isArray(d.aar)) aarData=d.aar;
@@ -1035,6 +1036,15 @@ async function fetchAll(){
       if(d.supplies&&Array.isArray(d.supplies)) suppliesData=d.supplies;
       if(d.rhythm&&Array.isArray(d.rhythm)) rhythmData=d.rhythm;
       saveLocal();rebuildTasks();populateDayFilter();render();updateStats();
+      // Re-render any open sub-tabs
+      const activePanel=document.querySelector('.panel.active');
+      if(activePanel){
+        const pid=activePanel.id;
+        if(pid==='panel-vehicles')renderVehicles();
+        if(pid==='panel-aar')renderAAR();
+        if(pid==='panel-supplies')renderSupplies();
+        if(pid==='panel-rhythm')renderRhythm();
+      }
       setSyncState('ok');
       document.getElementById('offline-banner').classList.remove('show');
     }
@@ -1388,7 +1398,7 @@ function saveSheetURL(){
   document.getElementById('setup-status').textContent='Connected.';
   document.getElementById('config-display').textContent='Connected: '+sheetURL.substring(0,70)+'...';
   fetchAll();
-  setInterval(fetchAll,30000);
+  setInterval(fetchAll,15000);
   setTimeout(renderQR,500);
 }
 function copyScript(btn){
@@ -1467,7 +1477,7 @@ function initBoard() {
     document.getElementById('config-display').textContent='Connected: '+sheetURL.substring(0,70)+'...';
   } catch(e){}
   fetchAll();
-  setInterval(fetchAll,30000);
+  setInterval(fetchAll,15000);
 }
 if(document.readyState==='loading'){
   document.addEventListener('DOMContentLoaded', initBoard);
