@@ -101,6 +101,12 @@ input[type="number"]::-webkit-outer-spin-button,input[type="number"]::-webkit-in
 .task-row.done .task-name{text-decoration:line-through}
 .task-meta{display:flex;gap:8px;margin-top:3px;flex-wrap:wrap}
 .task-note{font-family:var(--mono);font-size:11px;color:#8b9eb0}
+.pri-urgent{color:#ff4444;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1px;padding:1px 5px;border:1px solid rgba(255,68,68,.4);border-radius:3px;background:rgba(255,68,68,.08)}
+.pri-priority{color:var(--amber);font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1px;padding:1px 5px;border:1px solid rgba(210,153,34,.4);border-radius:3px;background:rgba(210,153,34,.08)}
+.pri-standard{display:none}
+.pri-select{font-family:var(--mono);font-size:9px;padding:2px 4px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text2);cursor:pointer}
+.pri-select.urgent{color:#ff4444;border-color:rgba(255,68,68,.4);background:rgba(255,68,68,.08)}
+.pri-select.priority{color:var(--amber);border-color:rgba(210,153,34,.4);background:rgba(210,153,34,.08)}
 .task-res{font-family:var(--mono);font-size:11px;color:#8b9eb0}
 
 /* OWNER DROPDOWN inside task row */
@@ -706,7 +712,7 @@ function json(obj) {
 let SECTIONS=['OPS','LOG','DD','S4','S1','BG','S2','BO/PL','ALL','WH'];
 let customSections=[];
 const KEY='se26ttt_v5';
-let localStatus={},localOwners={},customTasks=[],aarData=[...AAR_BASE],vehicleData=[...VEHICLES],rhythmData=[...RHYTHM_BASE];
+let localStatus={},localOwners={},localPriority={},customTasks=[],aarData=[...AAR_BASE],vehicleData=[...VEHICLES],rhythmData=[...RHYTHM_BASE];
 let TASKS=[...BASE_TASKS];
 const SHEET_URL='https://se26-board.dustindionne.workers.dev'; // Replace with your Cloudflare Worker URL after deploy
 let sheetURL=SHEET_URL,session='morning';
@@ -760,6 +766,7 @@ function loadLocal(){
   try{
     const d=JSON.parse(localStorage.getItem(KEY)||'{}');
     localStatus=d.statuses||{};
+    localPriority=d.localPriority||{};
     localOwners=d.owners||{};
     customTasks=d.customTasks||[];
     if(d.aarData)aarData=d.aarData;
@@ -772,7 +779,7 @@ function loadLocal(){
 }
 function saveLocal(){
   try{
-    localStorage.setItem(KEY,JSON.stringify({statuses:localStatus,owners:localOwners,customTasks,aarData,vehicleData,rhythmData,customSections,suppliesData}));
+    localStorage.setItem(KEY,JSON.stringify({statuses:localStatus,owners:localOwners,localPriority,customTasks,aarData,vehicleData,rhythmData,customSections,suppliesData}));
     localStorage.setItem(KEY+'_deleted', JSON.stringify(deletedIds));
     localStorage.setItem(KEY+'_edits', JSON.stringify(baseEdits));
   }catch(e){}
@@ -805,6 +812,16 @@ function cycleStatus(i){
   localStatus[taskId(i)]=next;
   pendingStatus[taskId(i)]=next;
   saveLocal();scheduleSyncPush();render();updateStats();
+}
+function getPriority(i){return localPriority[taskId(i)]||'standard';}
+function changePriority(i,val){
+  localPriority[taskId(i)]=val;
+  saveLocal();
+  // update select style
+  const sel=document.getElementById('pri-'+i);
+  if(sel){sel.className='pri-select'+(val!=='standard'?' '+val:'');}
+  if(sheetURL)fetch(sheetURL,{method:'POST',mode:'cors',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({action:'bulk_priority',data:{[taskId(i)]:val}})}).catch(()=>{});
 }
 function changeOwner(i,val){
   if(val==='__new__'){
@@ -996,6 +1013,7 @@ async function fetchAll(){
     if(d.ok){
       Object.assign(localStatus,d.statuses||{});
       Object.assign(localOwners,d.owners||{});
+      if(d.priorities)Object.assign(localPriority,d.priorities||{});
       if(d.tasks&&d.tasks.length){
         const existIds=new Set(customTasks.map(t=>t.id||t._id));
         d.tasks.forEach(t=>{
@@ -1125,8 +1143,13 @@ function render(){
       const selOpts=`<option value="">-- Assign --</option>`+allSections().map(sec=>`<option value="${sec}"${t._owner===sec?' selected':''}>${sec}</option>`).join('')+`<option value="__new__">+ Add new...</option>`;
       return`<div class="task-row ${s} ${flag?'flag':''}">
         <button class="status-btn ${s}" onclick="cycleStatus(${i})">${s==='done'?'&#10003;':s==='started'?'&#9680;':''}</button>
-        <div><div class="task-name">${t.task}${t._custom?'<span style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-left:6px">+NEW</span>':''}</div><div class="task-meta">${t.notes?`<span class="task-note">${t.notes}</span>`:''} ${t.res?`<span class="task-res">&#9731; ${t.res}</span>`:''} ${t._assignedTo?`<span class="task-note" style="color:var(--ops)">&#9654; ${t._assignedTo}</span>`:''}</div></div>
+        <div><div class="task-name">${getPriority(i)!=='standard'?`<span class="pri-${getPriority(i)}">${getPriority(i).toUpperCase()}</span> `:''} ${t.task}${t._custom?'<span style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-left:6px">+NEW</span>':''}</div><div class="task-meta">${t.notes?`<span class="task-note">${t.notes}</span>`:''} ${t.res?`<span class="task-res">&#9731; ${t.res}</span>`:''} ${t._assignedTo?`<span class="task-note" style="color:var(--ops)">&#9654; ${t._assignedTo}</span>`:''}</div></div>
         <select class="owner-select assigned ${ownerClass}" id="own-${i}" onchange="changeOwner(${i},this.value)">${selOpts}</select>
+        <select class="pri-select${getPriority(i)!=='standard'?' '+getPriority(i):''}" id="pri-${i}" onchange="changePriority(${i},this.value)">
+          <option value="standard"${getPriority(i)==='standard'?' selected':''}>STANDARD</option>
+          <option value="priority"${getPriority(i)==='priority'?' selected':''}>PRIORITY</option>
+          <option value="urgent"${getPriority(i)==='urgent'?' selected':''}>URGENT</option>
+        </select>
         <div class="status-pill">${spl}</div>
         <button class="edit-btn" onclick="editTask(${i})" title="Edit / Delete task">&#9998;</button>
       </div>`;
