@@ -1126,11 +1126,17 @@ function render(){
   const byDay={};
   filtered.forEach((t,fi)=>{const dk=isNaN(Number(t.d))?0:t.d;if(!byDay[dk])byDay[dk]=[];byDay[dk].push({...t,d:Number(dk)});});
   const STATUS_ORDER={'flag':0,'open':1,'started':2,'done':3};
+  const PRI_ORDER={'urgent':0,'priority':1,'standard':2};
   Object.keys(byDay).forEach(dk=>{
     byDay[dk].sort((a,b)=>{
       const as=!a._owner?'flag':a._s;
       const bs=!b._owner?'flag':b._s;
-      return (STATUS_ORDER[as]??1)-(STATUS_ORDER[bs]??1);
+      const sd=(STATUS_ORDER[as]??1)-(STATUS_ORDER[bs]??1);
+      if(sd!==0)return sd;
+      // Same status — sort by priority
+      const ap=PRI_ORDER[getPriority(a._gi)]??2;
+      const bp=PRI_ORDER[getPriority(b._gi)]??2;
+      return ap-bp;
     });
   });
   const days=Object.keys(byDay).sort((a,b)=>b-a);
