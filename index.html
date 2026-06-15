@@ -1124,7 +1124,15 @@ function render(){
     return true;
   });
   const byDay={};
-  filtered.forEach(t=>{const dk=isNaN(Number(t.d))?0:t.d;if(!byDay[dk])byDay[dk]=[];byDay[dk].push({...t,d:Number(dk)});});
+  filtered.forEach((t,fi)=>{const dk=isNaN(Number(t.d))?0:t.d;if(!byDay[dk])byDay[dk]=[];byDay[dk].push({...t,d:Number(dk)});});
+  const STATUS_ORDER={'flag':0,'open':1,'started':2,'done':3};
+  Object.keys(byDay).forEach(dk=>{
+    byDay[dk].sort((a,b)=>{
+      const as=!a._owner?'flag':a._s;
+      const bs=!b._owner?'flag':b._s;
+      return (STATUS_ORDER[as]??1)-(STATUS_ORDER[bs]??1);
+    });
+  });
   const days=Object.keys(byDay).sort((a,b)=>b-a);
   const board=document.getElementById('task-board');
   if(!filtered.length){board.innerHTML='<div class="empty-msg">NO TASKS MATCH THIS FILTER</div>';return;}
