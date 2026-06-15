@@ -1291,9 +1291,11 @@ function showTab(t,el){
   document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
   document.getElementById('panel-'+t).classList.add('active');
   el.classList.add('active');
-  if(t==='aar'){const d=document.getElementById('aar-date');if(d&&!d.value)d.valueAsDate=new Date();}
+  if(t==='vehicles')fetchAll().then(()=>renderVehicles()).catch(()=>renderVehicles());
+  if(t==='aar'){const d=document.getElementById('aar-date');if(d&&!d.value)d.valueAsDate=new Date();fetchAll().then(()=>renderAAR()).catch(()=>renderAAR());}
   if(t==='qr')renderQR();
-  if(t==='supplies')renderSupplies();
+  if(t==='supplies')fetchAll().then(()=>renderSupplies()).catch(()=>renderSupplies());
+  if(t==='rhythm')fetchAll().then(()=>renderRhythm()).catch(()=>renderRhythm());
 }
 function setSession(s){
   session=s;
