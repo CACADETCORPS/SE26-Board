@@ -88,7 +88,7 @@ input[type="number"]::-webkit-outer-spin-button,input[type="number"]::-webkit-in
 .day-tasks{display:flex;flex-direction:column;gap:4px}
 
 /* TASK ROW — now 5 cols to accommodate owner dropdown */
-.task-row{display:grid;grid-template-columns:32px 1fr 100px 72px 22px;gap:6px;align-items:start;padding:8px 10px;background:var(--surface);border:1px solid var(--border2);border-left:3px solid transparent;border-radius:3px;transition:border-color .15s,background .15s}
+.task-row{display:grid;grid-template-columns:32px 1fr 100px 70px 72px 22px;gap:6px;align-items:start;padding:8px 10px;background:var(--surface);border:1px solid var(--border2);border-left:3px solid transparent;border-radius:3px;transition:border-color .15s,background .15s}
 .task-row:hover{border-color:var(--border);border-left-color:var(--gold-dim);background:var(--surface2)}
 .task-row.done{opacity:.45;border-left-color:var(--green)!important}
 .task-row.started{border-left-color:var(--amber)!important}
@@ -215,7 +215,7 @@ input[type="number"]::-webkit-outer-spin-button,input[type="number"]::-webkit-in
 .qr-dl-btn:hover{border-color:var(--green);color:var(--green)}
 .qr-hint{font-family:var(--mono);font-size:11px;color:var(--text3);line-height:1.6}
 
-@media(max-width:700px){.stats-row{grid-template-columns:repeat(3,1fr)}.task-row{grid-template-columns:28px 1fr 80px 22px}.task-row .status-pill{display:none}.header-title{font-size:26px}}
+@media(max-width:700px){.stats-row{grid-template-columns:repeat(3,1fr)}.task-row{grid-template-columns:28px 1fr 80px 60px 22px}.task-row .status-pill{display:none}.header-title{font-size:26px}}
 </style>
 </head>
 <body>
@@ -813,7 +813,7 @@ function cycleStatus(i){
   pendingStatus[taskId(i)]=next;
   saveLocal();scheduleSyncPush();render();updateStats();
 }
-function getPriority(i){return localPriority[taskId(i)]||'standard';}
+function getPriority(i){if(i==null||!TASKS[i])return 'standard';return localPriority[taskId(i)]||'standard';}
 function changePriority(i,val){
   localPriority[taskId(i)]=val;
   saveLocal();
