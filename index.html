@@ -1274,13 +1274,20 @@ function deleteVehicle(i){
 }
 
 function renderAAR(){
-  document.getElementById('aar-list').innerHTML=aarData.map((r,i)=>`
-    <div class="aar-entry" style="grid-template-columns:80px 1fr 1fr 28px">
-      <div class="aar-date">${r.date}</div>
-      <div class="aar-sus">${r.sus}</div>
-      <div class="aar-imp">${r.imp}</div>
+  document.getElementById('aar-list').innerHTML=aarData.length?aarData.map((r,i)=>`
+    <div class="aar-entry" style="grid-template-columns:80px 1fr 1fr 28px;align-items:start">
+      <div class="aar-date" contenteditable="true" spellcheck="false"
+        onblur="aarData[${i}].date=this.textContent.trim();saveLocal();pushToWorker('sync_aar',aarData)"
+        style="outline:none;cursor:text;border-bottom:1px dashed var(--border)">${r.date}</div>
+      <div class="aar-sus" contenteditable="true" spellcheck="false"
+        onblur="aarData[${i}].sus=this.textContent.trim();saveLocal();pushToWorker('sync_aar',aarData)"
+        style="outline:none;cursor:text;border-bottom:1px dashed var(--border);white-space:pre-wrap">${r.sus}</div>
+      <div class="aar-imp" contenteditable="true" spellcheck="false"
+        onblur="aarData[${i}].imp=this.textContent.trim();saveLocal();pushToWorker('sync_aar',aarData)"
+        style="outline:none;cursor:text;border-bottom:1px dashed var(--border);white-space:pre-wrap">${r.imp}</div>
       <button class="delete-btn" onclick="deleteAAR(${i})" title="Delete">&#215;</button>
-    </div>`).join('');
+    </div>`).join('')
+  :'<div style="font-family:var(--mono);font-size:11px;color:var(--text3);padding:20px;text-align:center">No AAR entries yet.</div>';
 }
 function deleteAAR(i){
   if(!confirm('Delete this AAR entry?'))return;
